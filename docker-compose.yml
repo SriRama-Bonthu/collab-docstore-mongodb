@@ -1,0 +1,37 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: collab-docstore-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: collab-docstore-api
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017}
+      - DATABASE_NAME=${DATABASE_NAME:-collab_docstore}
+      - PORT=${PORT:-3000}
+      - SEED_DOCUMENT_COUNT=${SEED_DOCUMENT_COUNT:-10000}
+    ports:
+      - "3000:3000"
+
+volumes:
+  mongo_data:
